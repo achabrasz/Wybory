@@ -89,7 +89,7 @@ if __name__ == "__main__":
     # parsed_data = [[x.strip("'") for x in sublist] for sublist in parsed_data]
     # teryts = parsed_data
 
-    with ThreadPoolExecutor(max_workers=1) as executor:
+    with ThreadPoolExecutor(max_workers=16) as executor:
         futures = [executor.submit(scrape_powiatu, nr) for nr in teryts]
 
         for future in as_completed(futures):
@@ -103,10 +103,12 @@ if __name__ == "__main__":
     for teryt in failed:
         print(teryt)
 
-    failed_1 = len(failed)
+    failed_1 = failed
 
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        futures = [executor.submit(scrape_powiatu, nr) for nr in teryts]
+    lines = []
+
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        futures = [executor.submit(scrape_powiatu, nr) for nr in failed_1]
 
         for future in as_completed(futures):
             future.result()
@@ -119,4 +121,4 @@ if __name__ == "__main__":
     for teryt in failed:
         print(teryt)
 
-    print(f"first failed: {failed_1}")
+    print(f"first failed: {len(failed_1)}")

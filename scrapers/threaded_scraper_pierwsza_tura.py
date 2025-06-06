@@ -27,11 +27,18 @@ failed = []
 head = "nr_powiatu;Obwodowa Komisja Wyborcza nr;BARTOSZEWICZ Artur;BIEJAT Magdalena Agnieszka;BRAUN Grzegorz Michał;HOŁOWNIA Szymon Franciszek;JAKUBIAK Marek;MACIAK Maciej;MENTZEN Sławomir Jerzy;NAWROCKI Karol Tadeusz;SENYSZYN Joanna;STANOWSKI Krzysztof Jakub;TRZASKOWSKI Rafał Kazimierz;WOCH Marek Marian;ZANDBERG Adrian Tadeusz;"
 lines.append(head)
 
-def scrape_powiatu(url):
+def scrape_powiatu(combo):
     options = get_chrome_options()
     service = Service(CHROMEDRIVER_PATH)
-    driver = webdriver.Chrome(service=service, options=options)
-    line = "XXXX;"
+    try:
+        driver = webdriver.Chrome(service=service, options=options)
+    except Exception as e:
+        with open('../results/backup.csv', 'w', encoding='utf-8') as f:
+            f.write('\n'.join(lines))
+        print(f"Error initializing WebDriver: {e}")
+        return
+    nr_powiatu, url = combo.split(";")
+    line = f"{nr_powiatu};"
 
     try:
         driver.set_page_load_timeout(15)
@@ -61,11 +68,11 @@ def scrape_powiatu(url):
         with lock:
             lines.append(line)
     except Exception as e:
-        failed.append(url)
-        print(f"[{url}] Scraping failed: {e}")
+        failed.append(combo)
+        print(f"[{nr_powiatu}] Scraping failed: {e}")
     finally:
         driver.quit()
-        print(f"[{url}] Done.")
+        print(f"[{nr_powiatu}] Done.")
 
 if __name__ == "__main__":
     print("Started scraping...")
@@ -80,16 +87,14 @@ if __name__ == "__main__":
     # teryts_powiaty_described = [[teryt, 'p'] for teryt in teryts_powiaty]
     # teryts = teryts_described + teryts_powiaty_described
 
-    with open('Tert_data/linki.txt', 'r') as file:
+    with open('Tert_data/linki_2.txt', 'r') as file:
         linki = [line.strip() for line in file if line.strip()]
 
-    # with ThreadPoolExecutor(max_workers=1) as executor:
-    #     futures = [executor.submit(scrape_powiatu, nr) for nr in linki]
-    #
-    #     for future in as_completed(futures):
-    #         future.result()
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        futures = [executor.submit(scrape_powiatu, nr) for nr in linki]
 
-    scrape_powiatu(linki[0])
+        for future in as_completed(futures):
+            future.result()
 
     with open('../results/wyniki_wyborow_pierwsza_tura.csv', 'w', encoding='utf-8') as f:
         f.write('\n'.join(lines))
