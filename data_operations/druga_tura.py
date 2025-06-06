@@ -25,11 +25,29 @@ class ElectionClass:
         self.dt = pd.read_csv("../results/2_tura_merged.csv", sep=";")
         self.matching_rows_1 = None
         self.matching_rows_2 = None
+        self.difference_package = None
 
 def initialize_data(election):
     election.pt = election.pt.iloc[:, :-1]
     election.dt = election.dt.iloc[:, :-1]
     election.pt.iloc[:, 1] = election.pt.iloc[:, 1].str.replace("numer", "nr")
+    election.pt['nr_powiatu'] = election.pt['nr_powiatu'].astype(str)
+    election.dt['nr_powiatu'] = election.dt['nr_powiatu'].astype(str)
+    election.pt['nr_powiatu'] = election.pt['nr_powiatu'].str.strip()
+    election.dt['nr_powiatu'] = election.dt['nr_powiatu'].str.strip()
+    election.pt.iloc[:, 1] = election.pt.iloc[:, 1].astype(str)
+    election.dt.iloc[:, 1] = election.dt.iloc[:, 1].astype(str)
+    election.pt.iloc[:, 1] = election.pt.iloc[:, 1].str.strip()
+    election.dt.iloc[:, 1] = election.dt.iloc[:, 1].str.strip()
+    election.pt['Merged'] = election.pt['nr_powiatu'] + " " + election.pt.iloc[:, 1]
+    election.dt['Merged'] = election.dt['nr_powiatu'] + " " + election.dt.iloc[:, 1]
+    #remove duplicate rows in pt and dt
+    election.pt = election.pt.drop_duplicates(subset=['Merged'])
+    election.dt = election.dt.drop_duplicates(subset=['Merged'])
+    #sort pt and dt by 'Merged'
+    election.pt = election.pt.sort_values(by='Merged').reset_index(drop=True)
+    election.dt = election.dt.sort_values(by='Merged').reset_index(drop=True)
+    election.difference_package = election.dt['Merged'].isin(election.pt['Merged'])
     election.nawrocki_scrapped_sum_1 = pd.to_numeric(election.pt.iloc[:, 2], errors="coerce").sum()
     election.trzaskowski_scrapped_sum_1 = pd.to_numeric(election.pt.iloc[:, 4], errors="coerce").sum()
     election.nawrocki_scrapped_correction_1 = election.nawrocki_official_1 - election.nawrocki_scrapped_sum_1
@@ -42,16 +60,6 @@ def initialize_data(election):
     election.nawrocki_scrapped_correction_2 = election.nawrocki_official_2 - election.nawrocki_scrapped_sum_2
     election.trzaskowski_scrapped_correction_2 = election.trzaskowski_official_2 - election.trzaskowski_scrapped_sum_2
     election.glosy_correction_2 = election.glosy_official_2 - election.glosy_scrapped_sum_2
-    election.pt['nr_powiatu'] = election.pt['nr_powiatu'].astype(str)
-    election.dt['nr_powiatu'] = election.dt['nr_powiatu'].astype(str)
-    election.pt['nr_powiatu'] = election.pt['nr_powiatu'].str.strip()
-    election.dt['nr_powiatu'] = election.dt['nr_powiatu'].str.strip()
-    election.pt.iloc[:, 1] = election.pt.iloc[:, 1].astype(str)
-    election.dt.iloc[:, 1] = election.dt.iloc[:, 1].astype(str)
-    election.pt.iloc[:, 1] = election.pt.iloc[:, 1].str.strip()
-    election.dt.iloc[:, 1] = election.dt.iloc[:, 1].str.strip()
-    election.pt['Merged'] = election.pt['nr_powiatu'] + " " + election.pt.iloc[:, 1]
-    election.dt['Merged'] = election.dt['nr_powiatu'] + " " + election.dt.iloc[:, 1]
     #switch values of 1 col from numer to nr in pt and dt
 
 
@@ -79,13 +87,13 @@ def find_rows_where_trzaskowski_less_in_first(election):
 
     faulty_rows = []
 
-    print(temp_list_1)
-    print(temp_list_2)
-
     for row1, row2 in zip(temp_list_1, temp_list_2):
         if row1[1] > row2[1]:
+            row2.append(row1[1])
+            row2.append(row1[1] - row2[1])
+            row2.append(row1[0])
             faulty_rows.append(row2)
-    faulty_rows_df = pd.DataFrame(faulty_rows, columns=['Merged', 'Trzaskowski Less'])
+    faulty_rows_df = pd.DataFrame(faulty_rows, columns=['Merged', 'Merged 2', 'Trzaskowski 2', 'Trzaskowski 1','Difference'])
 
     return faulty_rows_df
 
@@ -100,6 +108,8 @@ if __name__ == "__main__":
 
     print(election.trzaskowski_scrapped_correction_2)
 
+    print(election.difference_package)
+
 
     # election.pt['Match'] = (election.pt['nr_powiatu'].isin(election.dt['nr_powiatu'])
     #                         & election.pt.iloc[:, 1].isin(election.dt.iloc[:, 1]))
@@ -107,10 +117,12 @@ if __name__ == "__main__":
 
     # Match rows
 
-    # print(election.matching_rows_1['Merged'])
-    # print(election.matching_rows_2['Merged'])
+    print(election.matching_rows_1['Merged'])
+    print(election.matching_rows_2['Merged'])
 
-    faulty = find_rows_where_trzaskowski_less_in_first(election)
-    print(faulty)
+    # faulty = find_rows_where_trzaskowski_less_in_first(election)
+    # with open("../results/druga_less", "w") as faulty_rows:
+    #     faulty.to_csv(faulty_rows, sep=";", index=False)
+    # print(faulty)
 
 
